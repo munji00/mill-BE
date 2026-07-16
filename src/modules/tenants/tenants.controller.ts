@@ -20,7 +20,6 @@ export class TenantsController {
     create(
         @Body() dto: CreateTenantDto,
     ) {
-        console.log(dto, 'tenant dto===>')
         return this.tenantService.create(dto);
     }
 
