@@ -1,14 +1,16 @@
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
 
-import  compression from "compression";
-import  cookieParser from "cookie-parser";
-import  helmet from "helmet";
+import compression from "compression";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   app.use(helmet());
 
@@ -17,7 +19,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://mill-fe.vercel.app"],
     credentials: true,
   });
 
@@ -31,9 +33,10 @@ async function bootstrap() {
     })
   );
 
-  await app.listen(5000);
+  const port = configService.get<number>("PORT") || 5000;
+  await app.listen(port);
 
-  console.log("Server running on port 5000");
+  console.log(`Server running on port ${port}`);
 }
 
 bootstrap();

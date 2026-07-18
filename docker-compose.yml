@@ -1,0 +1,52 @@
+services:
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: rice_mill_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword123
+      POSTGRES_DB: rice_mill
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rice_mill"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rice_mill_api
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgrespassword123@postgres_db:5432/rice_mill?schema=public
+      JWT_ACCESS_SECRET: your_access_secret
+      JWT_REFRESH_SECRET: your_refresh_secret
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CLIENT_URL: http://localhost:5173
+      VAPID_PUBLIC_KEY: BKJ9AmYmhZRofw_eMVmLo1RSiYMo04QzODpQDJ6TMPMx9i-qfzuuon3iTHyAZKYvUpkHmifRepNdg6c58Fih8wI
+      VAPID_PRIVATE_KEY: iTQDItmIK70O37KKWgkf2g9syrUs5WnsOMsGGCnr7yw
+      VAPID_SUBJECT: mailto:admin@ricemill.com
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    # Wait for database, sync schema and start server
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for database connection...' &&
+        npx prisma db push &&
+        node dist/main
+      "
+
+volumes:
+  postgres_data:
