@@ -2,9 +2,14 @@ import { Injectable, ForbiddenException, NotFoundException } from "@nestjs/commo
 import { PrismaService } from "../../database/prisma.service";
 import { User, UserRole } from "@prisma/client";
 
+import { NotificationsService } from "../notifications/notifications.service";
+
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService
+  ) {}
 
   private validateTenantUser(user: User) {
     if (!user.tenantId) {
@@ -38,7 +43,7 @@ export class InventoryService {
       },
     });
 
-    await this.triggerPartnerNotification(
+    await this.notificationsService.sendNotification(
       tenantId,
       `New inventory item created: "${item.itemName}"`,
       "Inventory",
@@ -68,7 +73,7 @@ export class InventoryService {
       data,
     });
 
-    await this.triggerPartnerNotification(
+    await this.notificationsService.sendNotification(
       tenantId,
       `Updated stock for inventory item "${item.itemName}" to ${item.stockQuantity} ${item.unit}`,
       "Inventory",
@@ -97,7 +102,7 @@ export class InventoryService {
       where: { id },
     });
 
-    await this.triggerPartnerNotification(
+    await this.notificationsService.sendNotification(
       tenantId,
       `Deleted inventory item "${existing.itemName}"`,
       "Inventory",
@@ -111,29 +116,4 @@ export class InventoryService {
     };
   }
 
-  private async triggerPartnerNotification(
-    tenantId: string,
-    message: string,
-    module: string,
-    type: string,
-    details: string
-  ) {
-    const partners = await this.prisma.user.findMany({
-      where: { tenantId, role: UserRole.PARTNER },
-    });
-
-    const whatsappDestinations = partners.map((p) => p.fullName).join(", ") || "No active partners";
-    const whatsappMsg = `[WhatsApp Alert to Partners (${whatsappDestinations})]: Admin made changes in ${module}: ${message}. Record payload: ${details}`;
-
-    await this.prisma.notification.create({
-      data: {
-        message,
-        tenantId,
-        type,
-        module,
-        whatsappSent: true,
-        whatsappMessageDetails: whatsappMsg,
-      },
-    });
-  }
 }
