@@ -100,6 +100,7 @@ model Purchase {
   totalAmount  Float
   supplierName String
   date         String
+  paymentStatus String  @default("Paid")
   tenantId     String
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
